@@ -13,7 +13,7 @@ import java.util.Arrays;
  * Specialized array to store the containers used by a RoaringBitmap. This is not meant to be used
  * by end users.
  */
-public final class RoaringArray implements Cloneable, Externalizable {
+public final class RoaringArray implements Cloneable, Externalizable, StorageArray {
   protected static final short SERIAL_COOKIE_NO_RUNCONTAINER = 12346;
   protected static final short SERIAL_COOKIE = 12347;
   protected static final int NO_OFFSET_THRESHOLD = 4;
@@ -167,7 +167,7 @@ public final class RoaringArray implements Cloneable, Externalizable {
       this.size++;
     }
   }
-  
+
 
 
   /**
@@ -186,7 +186,7 @@ public final class RoaringArray implements Cloneable, Externalizable {
     }
   }
 
-  
+
   private int binarySearch(int begin, int end, short key) {
     return Util.unsignedBinarySearch(keys, begin, end, key);
   }
@@ -346,9 +346,9 @@ public final class RoaringArray implements Cloneable, Externalizable {
   public ContainerPointer getContainerPointer() {
     return getContainerPointer(0);
   }
-  
+
   /**
-  * Create a ContainerPointer for this RoaringArray 
+  * Create a ContainerPointer for this RoaringArray
   * @param startIndex starting index in the container list
   * @return a ContainerPointer
   */
@@ -370,7 +370,7 @@ public final class RoaringArray implements Cloneable, Externalizable {
           return null;// will not happen
         }
       }
-      
+
       @Override
       public int compareTo(ContainerPointer o) {
         if (key() != o.key()) {
@@ -456,7 +456,7 @@ public final class RoaringArray implements Cloneable, Externalizable {
     }
   }
 
-  
+
   // insert a new key, it is assumed that it does not exist
   protected void insertNewKeyValueAt(int i, short key, Container value) {
     extendArray(1);

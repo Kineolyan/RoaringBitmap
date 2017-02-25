@@ -42,7 +42,13 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		this.values = values;
 	}
 
-	public StorageArray add(final int value) {
+	@Override
+	public boolean hasRunCompression() {
+		return false;
+	}
+
+	@Override
+	public StorageArray iadd(final int value) {
 		final int loc = Util.unsignedBinarySearch(values, 0, cardinality, value);
 		if (loc < 0) {
 			// Transform the ArrayContainer to a BitmapContainer
@@ -72,7 +78,8 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		return this;
 	}
 
-	public StorageArray add(final long rangeStart, final long rangeEnd) {
+	@Override
+	public StorageArray iadd(final long rangeStart, final long rangeEnd) {
 		// Using longs to have unsigned int values, in [0, (1 << 32) - 1]
 		// FIXME support properly the range with ints, as it is possible to have overflowing ranges
 		if (rangeStart == rangeEnd) {
@@ -128,7 +135,8 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		return this;
 	}
 
-	public StorageArray remove(final long x) {
+	@Override
+	public StorageArray iremove(final int x) {
 		final int value = (int) x;
 		final int loc = Util.unsignedBinarySearch(values, 0, cardinality, value);
 		if (loc >= 0) {
@@ -140,7 +148,8 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		return this;
 	}
 
-	public StorageArray remove(final long rangeStart, final long rangeEnd) {
+	@Override
+	public StorageArray iremove(final long rangeStart, final long rangeEnd) {
 		if (rangeStart == rangeEnd) {
 			return this;
 		}
@@ -168,6 +177,16 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		} // else nothing to do if the values
 
 		return this;
+	}
+
+	@Override
+	public boolean runOptimize() {
+		return false;
+	}
+
+	@Override
+	public boolean removeRunCompression() {
+		return false;
 	}
 
 	private RoaringArray toRoaringArray() {

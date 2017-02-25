@@ -969,4 +969,14 @@ public final class Util {
    */
   private Util() {}
 
+  public static void rangeSanityCheck(final long rangeStart, final long rangeEnd) {
+    if (rangeStart < 0 || rangeStart > (1L << 32)-1) {
+      throw new IllegalArgumentException("rangeStart="+ rangeStart
+                                         +" should be in [0, 0xffffffff]");
+    }
+    if (rangeEnd > (1L << 32) || rangeEnd < 0) {
+      throw new IllegalArgumentException("rangeEnd="+ rangeEnd
+                                         +" should be in [0, 0xffffffff + 1]");
+    }
+  }
 }

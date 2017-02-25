@@ -6,11 +6,9 @@
  */
 package org.roaringbitmap;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.io.*;
 import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * @author QuartetFS
@@ -40,6 +38,41 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 	protected MewingArray(final int cardinality, final int[] values) {
 		this.cardinality = cardinality;
 		this.values = values;
+	}
+
+	@Override
+	public int size() {
+		return this.cardinality;
+	}
+
+	@Override
+	public long getLongCardinality() {
+		return this.cardinality;
+	}
+
+	@Override
+	public int getCardinality() {
+		return cardinality;
+	}
+
+	@Override
+	public long getLongSizeInBytes() {
+		return getSizeInBytes();
+	}
+
+	@Override
+	public int getSizeInBytes() {
+		return 8 // Class header
+			+ 4 // integer size
+			+ 8 // array reference
+			+ 12 // Array header
+			+ 4 * this.values.length // Array content
+			;
+	}
+
+	@Override
+	public PeekableIntIterator getIntIterator() {
+		return null;
 	}
 
 	@Override
@@ -202,7 +235,7 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 	}
 
 	@Override
-	protected Object clone() {
+	public MewingArray clone() {
 		return new MewingArray(
 			this.cardinality,
 			Arrays.copyOf(this.values, this.cardinality)
@@ -211,6 +244,11 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
+		serialize(out);
+	}
+
+	@Override
+	public void serialize(DataOutput out) throws IOException {
 		out.writeInt(Integer.reverseBytes(this.cardinality));
 		// little endian
 		for (int k = 0; k < this.cardinality; ++k) {
@@ -220,6 +258,11 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		deserialize(in);
+	}
+
+	@Override
+	public void deserialize(DataInput in) throws IOException {
 		this.cardinality = Integer.reverseBytes(in.readInt());
 
 		if (this.values.length < this.cardinality) {
@@ -229,4 +272,5 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 			this.values[k] = Integer.reverseBytes(in.readInt());
 		}
 	}
+
 }

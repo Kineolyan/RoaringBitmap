@@ -8,7 +8,6 @@ import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MappeableContainerPointer;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
-import javax.naming.OperationNotSupportedException;
 import java.io.*;
 import java.util.Iterator;
 
@@ -821,6 +820,14 @@ public class RoaringBitmap implements Cloneable, Serializable, Iterable<Integer>
     }
   }
 
+	// to be used with lazyor
+	protected void repairAfterLazy() {
+		for (int k = 0; k < highLowContainer.size(); ++k) {
+			Container c = highLowContainer.getContainerAtIndex(k);
+			highLowContainer.setContainerAtIndex(k, c.repairAfterLazy());
+		}
+	}
+
   /**
    * Create a new Roaring bitmap containing at most maxcardinality integers.
    *
@@ -844,6 +851,7 @@ public class RoaringBitmap implements Cloneable, Serializable, Iterable<Integer>
   public void or(final RoaringBitmap x2) {
   	// FIXME code this dispatch
   }
+
 
   /**
    * Computes OR between input bitmaps in the given range, from rangeStart (inclusive) to rangeEnd
@@ -870,21 +878,20 @@ public class RoaringBitmap implements Cloneable, Serializable, Iterable<Integer>
    * @param bitmaps input bitmaps, these are not modified
    * @param rangeStart inclusive beginning of range
    * @param rangeEnd exclusive ending of range
-   * @return new result bitmap 
-   * @deprecated use the version where longs specify the range. 
+   * @return new result bitmap
+   * @deprecated use the version where longs specify the range.
    *     Negative range points are forbidden.
    */
   @Deprecated
-    public static RoaringBitmap or(@SuppressWarnings("rawtypes") final Iterator bitmaps, 
+    public static RoaringBitmap or(@SuppressWarnings("rawtypes") final Iterator bitmaps,
           final int rangeStart, final int rangeEnd) {
     return or(bitmaps, (long) rangeStart, (long) rangeEnd);
   }
 
-
   /**
    * Rank returns the number of integers that are smaller or equal to x (Rank(infinity) would be
    * GetCardinality()).
-   * 
+   *
    * @param x upper limit
    *
    * @return the rank
@@ -893,7 +900,7 @@ public class RoaringBitmap implements Cloneable, Serializable, Iterable<Integer>
   public long rankLong(int x) {
     return this.highLowContainer.rank(x);
   }
-  
+
   @Override
   public int rank(int x) {
     return (int) rankLong(x);
@@ -928,6 +935,7 @@ public class RoaringBitmap implements Cloneable, Serializable, Iterable<Integer>
    this.highLowContainer = this.highLowContainer.iremove(rangeStart, rangeEnd);
   }
 
+
   /**
    * Remove from the current bitmap all integers in [rangeStart,rangeEnd).
    *
@@ -942,25 +950,16 @@ public class RoaringBitmap implements Cloneable, Serializable, Iterable<Integer>
     }
     // rangeStart being -ve and rangeEnd being positive is not expected)
     // so assume both -ve
-    remove(rangeStart & 0xFFFFFFFFL, rangeEnd & 0xFFFFFFFFL); 
+    remove(rangeStart & 0xFFFFFFFFL, rangeEnd & 0xFFFFFFFFL);
   }
-
 
   /**
    * Remove run-length encoding even when it is more space efficient
-   * 
+   *
    * @return whether a change was applied
    */
   public boolean removeRunCompression() {
     return this.highLowContainer.removeRunCompression();
-  }
-
-  // to be used with lazyor
-  protected void repairAfterLazy() {
-    for (int k = 0; k < highLowContainer.size(); ++k) {
-      Container c = highLowContainer.getContainerAtIndex(k);
-      highLowContainer.setContainerAtIndex(k, c.repairAfterLazy());
-    }
   }
 
   /**

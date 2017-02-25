@@ -22,7 +22,9 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 	public static final int INITIAL_CAPACITY = 4;
 	public static final int DEFAULT_MAX_SIZE = 4096; // FIXME not sure yet
 
-	protected short cardinality;
+	// TODO this could be a short, given the expected number of elements
+	// May be relevant for the size of the structure
+	protected int cardinality;
 
 	private int[] values;
 
@@ -35,7 +37,7 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		this.cardinality = 0;
 	}
 
-	protected MewingArray(final short cardinality, final int[] values) {
+	protected MewingArray(final int cardinality, final int[] values) {
 		this.cardinality = cardinality;
 		this.values = values;
 	}
@@ -73,15 +75,34 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 	public StorageArray add(final long rangeStart, final long rangeEnd) {
 		// Using longs to have unsigned int values, in [0, (1 << 32) - 1]
 		// FIXME support properly the range with ints, as it is possible to have overflowing ranges
-		if(end == begin) {
+		if (rangeStart == rangeEnd) {
 			return this; // Why cloning in
 		}
-		if ((begin > end) || (end > (1 << 16))) {
-			throw new IllegalArgumentException("Invalid range [" + begin + "," + end + ")");
+//		if ((begin > end) || (end > (1 << 16))) {
+//			throw new IllegalArgumentException("Invalid range [" + begin + "," + end + ")");
+//		}
+		final int startValue = (int) rangeStart;
+		final int endValue = (int) rangeEnd;
+
+		int startLoc = Util.unsignedBinarySearch(values, 0, cardinality, startValue);
+		if (startLoc < 0) {
+			startLoc = -startLoc - 1;
+		}
+		int endLoc = Util.unsignedBinarySearch(values, 0, cardinality, endValue - 1);
+		if (endLoc < 0) {
+			endLoc = -endLoc - 1;
+		} else {
+			endLoc++;
 		}
 
+		final int rangeLength = (int) (rangeEnd - rangeStart);
+		final int rangeLocLength = endLoc - startLoc;
+		if (rangeLocLength == rangeLength) {
+			// All values to insert are already present
+			return this;
+		}
 
-		final int newCardinality = cardinality + (int) (rangeEnd - rangeStart);
+		final int newCardinality = cardinality - rangeLocLength + rangeLength;
 		if (newCardinality > DEFAULT_MAX_SIZE) {
 			final RoaringArray a = toRoaringArray();
 			a.add(rangeStart, rangeEnd);
@@ -89,38 +110,64 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 			return a;
 		}
 
-		int startLoc = Util.unsignedBinarySearch(values, 0, cardinality, (int) rangeStart);
+		final int newCapacity = getIncreasedCapacity();
+		final int[] previousValues = values;
+		if (newCapacity > values.length) {
+			values = new int[newCapacity];
+			// Copy the values before the range
+			System.arraycopy(values, 0, previousValues, 0, startLoc);
+		}
+
+		// Copy the values after the range
+		System.arraycopy(previousValues, endLoc, values, startLoc + rangeLength, cardinality - endLoc);
+		for (int i = startLoc, v = startValue; i < endLoc; i += 1, v += 1) {
+			values[i] = v;
+		}
+		cardinality = newCardinality;
+
+		return this;
+	}
+
+	public StorageArray remove(final long x) {
+		final int value = (int) x;
+		final int loc = Util.unsignedBinarySearch(values, 0, cardinality, value);
+		if (loc >= 0) {
+			// insertion
+			System.arraycopy(values, loc + 1, values, loc, cardinality - loc - 1);
+			--cardinality;
+		}
+
+		return this;
+	}
+
+	public StorageArray remove(final long rangeStart, final long rangeEnd) {
+		if (rangeStart == rangeEnd) {
+			return this;
+		}
+
+//		if ((begin > end) || (end > (1 << 16))) {
+//			throw new IllegalArgumentException("Invalid range [" + begin + "," + end + ")");
+//		}
+		final int startValue = (int) rangeStart;
+		final int endValue = (int) rangeEnd;
+		int startLoc = Util.unsignedBinarySearch(values, 0, cardinality, startValue);
 		if (startLoc < 0) {
 			startLoc = -startLoc - 1;
 		}
-		int endLoc = Util.unsignedBinarySearch(values, 0, cardinality, (int) (rangeEnd - 1));
+		int endLoc = Util.unsignedBinarySearch(values, 0, cardinality, endValue - 1);
 		if (endLoc < 0) {
 			endLoc = -endLoc - 1;
 		} else {
 			endLoc++;
 		}
 
-		if (endLoc - startLoc == 1) {
-			// All values insert at a single point
-			// Copy before start, insert values, copy after
-			final int newCapacity = getIncreasedCapacity();
-			final int[] previousValues = values;
-			if (newCapacity > values.length) {
-				values = new int[newCapacity];
-				System.arraycopy(values, 0, previousValues, 0, startLoc);
-			}
+		final int rangeLocLength = endLoc - startLoc;
+		if (rangeLocLength > 0) {
+			System.arraycopy(values, endLoc, values, startLoc, cardinality - endLoc);
+			cardinality -= endLoc - startLoc;
+		} // else nothing to do if the values
 
-			System.arraycopy(values, newCapacity - endLoc, previousValues, endLoc, cardinality - endLoc);
-		} else {
-
-		}
-		System.arraycopy(content, endLoc, answer.content, startLoc + rangelength,
-				cardinality - endLoc);
-		for (int k = 0; k < rangelength; ++k) {
-			answer.content[k + startLoc] = (short) (begin + k);
-		}
-		answer.cardinality = newcardinality;
-		return answer;
+		return this;
 	}
 
 	private RoaringArray toRoaringArray() {
@@ -129,24 +176,23 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 
 	private int getIncreasedCapacity() {
 		final int newCapacity = (this.values.length == 0) ? INITIAL_CAPACITY
-				: this.values.length < 64 ? this.values.length * 2
-				: this.values.length < 1067 ? this.values.length * 3 / 2
-				: this.values.length * 5 / 4;
+			: this.values.length < 64 ? this.values.length * 2
+			: this.values.length < 1067 ? this.values.length * 3 / 2
+			: this.values.length * 5 / 4;
 		return Math.min(newCapacity, DEFAULT_MAX_SIZE);
 	}
-
 
 	@Override
 	protected Object clone() {
 		return new MewingArray(
-				this.cardinality,
-				Arrays.copyOf(this.values, this.cardinality)
+			this.cardinality,
+			Arrays.copyOf(this.values, this.cardinality)
 		);
 	}
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		out.writeShort(Short.reverseBytes(this.cardinality));
+		out.writeInt(Integer.reverseBytes(this.cardinality));
 		// little endian
 		for (int k = 0; k < this.cardinality; ++k) {
 			out.writeInt(Integer.reverseBytes(this.values[k]));
@@ -155,7 +201,7 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		this.cardinality = Short.reverseBytes(in.readShort());
+		this.cardinality = Integer.reverseBytes(in.readInt());
 
 		if (this.values.length < this.cardinality) {
 			this.values = new int[this.cardinality];

@@ -6,9 +6,13 @@
  */
 package org.roaringbitmap;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  * @author QuartetFS

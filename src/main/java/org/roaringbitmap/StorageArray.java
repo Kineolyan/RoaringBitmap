@@ -77,6 +77,8 @@ public interface StorageArray extends Cloneable, Iterable<Integer>, Externalizab
 
 	StorageArray iremove(int x);
 
+	StorageArray remove(long rangeStart, long rangeEnd);
+
 	StorageArray iremove(long rangeStart, long rangeEnd);
 
 	StorageArray icheckedRemove(int x, boolean[] result);
@@ -113,6 +115,8 @@ public interface StorageArray extends Cloneable, Iterable<Integer>, Externalizab
 	 * @see FastAggregation#and(RoaringBitmap...)
 	 */
 	int andCardinality(StorageArray other);
+
+	StorageArray or(StorageArray other);
 
 	StorageArray ior(StorageArray other);
 

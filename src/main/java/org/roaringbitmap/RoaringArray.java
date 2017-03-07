@@ -818,10 +818,61 @@ public final class RoaringArray implements Cloneable, Externalizable, StorageArr
 	}
 
 	@Override
+	public StorageArray or(final StorageArray other_) {
+		// Size can only increase, no possible conversion
+		// FIXME can accept MewingBitmap
+		final RoaringArray other = ensureType(other_);
+
+		final RoaringArray answer = new RoaringArray();
+		int pos1 = 0, pos2 = 0;
+		final int length1 = this.size(), length2 = other.size();
+		main:
+		if (pos1 < length1 && pos2 < length2) {
+			short s1 = this.getKeyAtIndex(pos1);
+			short s2 = other.getKeyAtIndex(pos2);
+
+			while (true) {
+				if (s1 == s2) {
+					answer.append(s1, this.getContainerAtIndex(pos1)
+							.or(other.getContainerAtIndex(pos2)));
+					pos1++;
+					pos2++;
+					if ((pos1 == length1) || (pos2 == length2)) {
+						break main;
+					}
+					s1 = this.getKeyAtIndex(pos1);
+					s2 = other.getKeyAtIndex(pos2);
+				} else if (Util.compareUnsigned(s1, s2) < 0) { // s1 < s2
+					answer.appendCopy(this, pos1);
+					pos1++;
+					if (pos1 == length1) {
+						break main;
+					}
+					s1 = this.getKeyAtIndex(pos1);
+				} else { // s1 > s2
+					answer.appendCopy(other, pos2);
+					pos2++;
+					if (pos2 == length2) {
+						break main;
+					}
+					s2 = other.getKeyAtIndex(pos2);
+				}
+			}
+		}
+		if (pos1 == length1) {
+			answer.appendCopy(other, pos2, length2);
+		} else if (pos2 == length2) {
+			answer.appendCopy(this, pos1, length1);
+		}
+		return answer;
+	}
+
+	@Override
 	public StorageArray ior(StorageArray other_) {
 		// Size cannot decrease, no possible conversion
+		// FIXME can accept MewingBitmap
 		final RoaringArray other = ensureType(other_);
-		
+
 		int pos1 = 0, pos2 = 0;
 		int length1 = size();
 		final int length2 = other.size();
@@ -1141,6 +1192,48 @@ public final class RoaringArray implements Cloneable, Externalizable, StorageArr
 	}
 
 	@Override
+	public StorageArray remove(final long rangeStart, final long rangeEnd) {
+		final int hbStart = Util.toIntUnsigned(Util.highbits(rangeStart));
+		final int lbStart = Util.toIntUnsigned(Util.lowbits(rangeStart));
+		final int hbLast = Util.toIntUnsigned(Util.highbits(rangeEnd - 1));
+		final int lbLast = Util.toIntUnsigned(Util.lowbits(rangeEnd - 1));
+
+		final RoaringArray answer = new RoaringArray();
+		answer.appendCopiesUntil(this, (short) hbStart);
+
+		if (hbStart == hbLast) {
+			final int i = this.getIndex((short) hbStart);
+			if (i >= 0) {
+				final Container c = this.getContainerAtIndex(i).remove(lbStart, lbLast + 1);
+				if (c.getCardinality() > 0) {
+					answer.append((short) hbStart, c);
+				}
+			}
+			answer.appendCopiesAfter(this, (short) hbLast);
+			return answer;
+		}
+		int ifirst = this.getIndex((short) hbStart);
+		int ilast = this.getIndex((short) hbLast);
+		if ((ifirst >= 0) && (lbStart != 0)) {
+			final Container c = this.getContainerAtIndex(ifirst).remove(lbStart,
+					Util.maxLowBitAsInteger() + 1);
+			if (c.getCardinality() > 0) {
+				answer.append((short) hbStart, c);
+			}
+		}
+		if ((ilast >= 0) && (lbLast != Util.maxLowBitAsInteger())) {
+			final Container c = this.getContainerAtIndex(ilast).remove(0, lbLast + 1);
+			if (c.getCardinality() > 0) {
+				answer.append((short) hbLast, c);
+			}
+		}
+		answer.appendCopiesAfter(this, (short) hbLast);
+
+		// FIXME a conversion may be needed
+		return answer;
+	}
+
+	@Override
 	public boolean runOptimize() {
 		boolean answer = false;
 		for (int i = 0; i < size(); i++) {
@@ -1333,93 +1426,6 @@ public final class RoaringArray implements Cloneable, Externalizable, StorageArr
 		} else if (pos2 == length2) {
 			answer.append(x1, pos1, length1);
 		}
-		return answer;
-	}
-
-	public StorageArray or(final StorageArray other_) {
-		// Size can only increase, no possible conversion
-		final RoaringArray other = ensureType(other_);
-
-		final RoaringArray answer = new RoaringArray();
-		int pos1 = 0, pos2 = 0;
-		final int length1 = this.size(), length2 = other.size();
-		main:
-		if (pos1 < length1 && pos2 < length2) {
-			short s1 = this.getKeyAtIndex(pos1);
-			short s2 = other.getKeyAtIndex(pos2);
-
-			while (true) {
-				if (s1 == s2) {
-					answer.append(s1, this.getContainerAtIndex(pos1)
-						.or(other.getContainerAtIndex(pos2)));
-					pos1++;
-					pos2++;
-					if ((pos1 == length1) || (pos2 == length2)) {
-						break main;
-					}
-					s1 = this.getKeyAtIndex(pos1);
-					s2 = other.getKeyAtIndex(pos2);
-				} else if (Util.compareUnsigned(s1, s2) < 0) { // s1 < s2
-					answer.appendCopy(this, pos1);
-					pos1++;
-					if (pos1 == length1) {
-						break main;
-					}
-					s1 = this.getKeyAtIndex(pos1);
-				} else { // s1 > s2
-					answer.appendCopy(other, pos2);
-					pos2++;
-					if (pos2 == length2) {
-						break main;
-					}
-					s2 = other.getKeyAtIndex(pos2);
-				}
-			}
-		}
-		if (pos1 == length1) {
-			answer.appendCopy(other, pos2, length2);
-		} else if (pos2 == length2) {
-			answer.appendCopy(this, pos1, length1);
-		}
-		return answer;
-	}
-
-	public static RoaringArray remove(RoaringArray ra, final long rangeStart, final long rangeEnd) {
-		final int hbStart = Util.toIntUnsigned(Util.highbits(rangeStart));
-		final int lbStart = Util.toIntUnsigned(Util.lowbits(rangeStart));
-		final int hbLast = Util.toIntUnsigned(Util.highbits(rangeEnd - 1));
-		final int lbLast = Util.toIntUnsigned(Util.lowbits(rangeEnd - 1));
-
-		final RoaringArray answer = new RoaringArray();
-		answer.appendCopiesUntil(ra, (short) hbStart);
-
-		if (hbStart == hbLast) {
-			final int i = ra.getIndex((short) hbStart);
-			if (i >= 0) {
-				final Container c = ra.getContainerAtIndex(i).remove(lbStart, lbLast + 1);
-				if (c.getCardinality() > 0) {
-					answer.append((short) hbStart, c);
-				}
-			}
-			answer.appendCopiesAfter(ra, (short) hbLast);
-			return answer;
-		}
-		int ifirst = ra.getIndex((short) hbStart);
-		int ilast = ra.getIndex((short) hbLast);
-		if ((ifirst >= 0) && (lbStart != 0)) {
-			final Container c = ra.getContainerAtIndex(ifirst).remove(lbStart,
-				Util.maxLowBitAsInteger() + 1);
-			if (c.getCardinality() > 0) {
-				answer.append((short) hbStart, c);
-			}
-		}
-		if ((ilast >= 0) && (lbLast != Util.maxLowBitAsInteger())) {
-			final Container c = ra.getContainerAtIndex(ilast).remove(0, lbLast + 1);
-			if (c.getCardinality() > 0) {
-				answer.append((short) hbLast, c);
-			}
-		}
-		answer.appendCopiesAfter(ra, (short) hbLast);
 		return answer;
 	}
 
@@ -1637,7 +1643,7 @@ public final class RoaringArray implements Cloneable, Externalizable, StorageArr
 				break;
 			}
 		}
-		
+
 		// FIXME conversion may be needed
 		return answer;
 	}

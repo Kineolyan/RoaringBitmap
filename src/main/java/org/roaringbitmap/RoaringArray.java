@@ -995,7 +995,7 @@ public final class RoaringArray implements Cloneable, Externalizable, StorageArr
 
 	@Override
 	public StorageArray iadd(int x) {
-		// Size can decrease, no possible conversion
+		// Size cannot decrease, no possible conversion
 
 		final short hb = Util.highbits(x);
 		final int i = this.getIndex(hb);

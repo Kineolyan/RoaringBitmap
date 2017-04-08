@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 
 /**
  * @author QuartetFS
@@ -76,7 +78,42 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 
 	@Override
 	public PeekableIntIterator getIntIterator() {
-		return null;
+		// FIXME implement
+	}
+
+	@Override
+	public IntIterator getReverseIntIterator() {
+		// FIXME implement
+	}
+
+	@Override
+	public boolean contains(int x) {
+		final int loc = IntUtil.unsignedBinarySearch(values, 0, cardinality, x);
+		return loc >= 0;
+	}
+
+	@Override
+	public void forEach(final IntConsumer consumer) {
+		for (int value : values) {
+			consumer.accept(value);
+		}
+	}
+
+	@Override
+	public int select(int i) {
+		if (0 <= i && i < cardinality) {
+			return values[i];
+		} else if (i < 0) {
+			throw new IllegalArgumentException("Negative index provided: " + i);
+		} else {
+			throw new IllegalArgumentException("Exceeding index " + i + " while bitmap contains only " + cardinality + " elements");
+		}
+	}
+
+	@Override
+	public long rank(int x) {
+		final int loc = IntUtil.unsignedBinarySearch(values, 0, cardinality, x);
+		return loc < 0 ? -loc : loc + 1;
 	}
 
 	@Override
@@ -86,7 +123,7 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 
 	@Override
 	public StorageArray iadd(final int value) {
-		final int loc = Util.unsignedBinarySearch(values, 0, cardinality, value);
+		final int loc = IntUtil.unsignedBinarySearch(values, 0, cardinality, value);
 		if (loc < 0) {
 			// Transform the ArrayContainer to a BitmapContainer
 			// when cardinality = DEFAULT_MAX_SIZE
@@ -128,11 +165,11 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		final int startValue = (int) rangeStart;
 		final int endValue = (int) rangeEnd;
 
-		int startLoc = Util.unsignedBinarySearch(values, 0, cardinality, startValue);
+		int startLoc = IntUtil.unsignedBinarySearch(values, 0, cardinality, startValue);
 		if (startLoc < 0) {
 			startLoc = -startLoc - 1;
 		}
-		int endLoc = Util.unsignedBinarySearch(values, 0, cardinality, endValue - 1);
+		int endLoc = IntUtil.unsignedBinarySearch(values, 0, cardinality, endValue - 1);
 		if (endLoc < 0) {
 			endLoc = -endLoc - 1;
 		} else {
@@ -173,9 +210,19 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 	}
 
 	@Override
+	public StorageArray icheckedAdd(int x, boolean[] result) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray add(long rangeStart, long rangeEnd) {
+		// FIXME implement
+	}
+
+	@Override
 	public StorageArray iremove(final int x) {
 		final int value = (int) x;
-		final int loc = Util.unsignedBinarySearch(values, 0, cardinality, value);
+		final int loc = IntUtil.unsignedBinarySearch(values, 0, cardinality, value);
 		if (loc >= 0) {
 			// insertion
 			System.arraycopy(values, loc + 1, values, loc, cardinality - loc - 1);
@@ -183,6 +230,11 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		}
 
 		return this;
+	}
+
+	@Override
+	public StorageArray remove(long rangeStart, long rangeEnd) {
+		// FIXME implement
 	}
 
 	@Override
@@ -196,11 +248,11 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 //		}
 		final int startValue = (int) rangeStart;
 		final int endValue = (int) rangeEnd;
-		int startLoc = Util.unsignedBinarySearch(values, 0, cardinality, startValue);
+		int startLoc = IntUtil.unsignedBinarySearch(values, 0, cardinality, startValue);
 		if (startLoc < 0) {
 			startLoc = -startLoc - 1;
 		}
-		int endLoc = Util.unsignedBinarySearch(values, 0, cardinality, endValue - 1);
+		int endLoc = IntUtil.unsignedBinarySearch(values, 0, cardinality, endValue - 1);
 		if (endLoc < 0) {
 			endLoc = -endLoc - 1;
 		} else {
@@ -217,6 +269,18 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 	}
 
 	@Override
+	public StorageArray icheckedRemove(int x, boolean[] result) {
+		// FIXME implement
+	}
+
+	@Override
+	public void trim() {
+		final int[] newValues = new int[cardinality];
+		System.arraycopy(values, 0, newValues, 0, cardinality);
+		values = newValues;
+	}
+
+	@Override
 	public boolean runOptimize() {
 		return false;
 	}
@@ -226,8 +290,123 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		return false;
 	}
 
+	@Override
+	public StorageArray and(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray iand(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public int andCardinality(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray or(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray ior(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray iandNot(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray andNot(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray add(int... values) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray flip(long rangeStart, long rangeEnd) {
+		// FIXME implement
+	}
+
+	@Override
+	public boolean intersects(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray xor(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray iflip(int x) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray iflip(long rangeStart, long rangeEnd) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray ixor(StorageArray other) {
+		// FIXME implement
+	}
+
+	@Override
+	public StorageArray limit(int maxCardinality) {
+		final int newCardinality = Math.min(maxCardinality, cardinality);
+		return new MewingArray(newCardinality, toArray(0, newCardinality));
+	}
+
+	@Override
+	public StorageArray selectRangeWithoutCopy(long rangeStart, long rangeEnd) {
+		final int startValue, endValue;
+		int startLoc = IntUtil.unsignedBinarySearch(values, 0, cardinality, startValue);
+		if (startLoc < 0) {
+			startLoc = -startLoc + 1;
+		}
+		int endLoc = IntUtil.unsignedBinarySearch(values, 0, cardinality, endValue);
+		if (endLoc < 0) {
+			endLoc = -endLoc + 1;
+		}
+
+		if (startLoc < endLoc) {
+			final int[] newValues = toArray(startLoc, endLoc + 1);
+			return new MewingArray(newValues.length, newValues);
+		} else {
+			// Empty range
+			return new MewingArray();
+		}
+	}
+
+	@Override
+	public int[] toArray() {
+		return toArray(0, cardinality);
+	}
+
+	private int[] toArray(final int startIdx, final int endIdx) {
+		final int newCardinality = endIdx - startIdx;
+		final int[] newValues = new int[newCardinality];
+		System.arraycopy(values, startIdx, newValues, 0, newCardinality);
+
+		return newValues;
+	}
+
 	private RoaringArray toRoaringArray() {
-		return null;
+		final RoaringArray newStorage = new RoaringArray();
+		for (int value : values) {
+			newStorage.iadd(value);
+		}
+
+		return newStorage;
 	}
 
 	private int getIncreasedCapacity() {
@@ -277,4 +456,34 @@ public class MewingArray implements Cloneable, Externalizable, StorageArray {
 		}
 	}
 
+	@Override
+	public int serializedSizeInBytes() {
+		return 0;
+	}
+
+	@Override
+	public Iterator<Integer> iterator() {
+		return new Iterator<Integer>() {
+			private int pos = 0;
+
+			@Override
+			public boolean hasNext() {
+				return pos < MewingArray.this.values.length;
+			}
+
+			@Override
+			public Integer next() {
+				if (hasNext()) {
+					return MewingArray.this.values[pos++];
+				} else {
+					throw new ConcurrentModificationException(MewingArray.class.getSimpleName() + " changed while iterating on it. Position " + pos + " does not exist anymore since call to #hasNext");
+				}
+			}
+
+			@Override
+			public void remove() {
+				iremove(MewingArray.this.values[pos]);
+			}
+		};
+	}
 }

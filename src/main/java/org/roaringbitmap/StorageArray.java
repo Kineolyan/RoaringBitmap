@@ -43,8 +43,23 @@ public interface StorageArray extends Cloneable, Iterable<Integer>, Externalizab
 
 	void forEach(IntConsumer ic);
 
+	/**
+	 * Return the jth value stored in this bitmap.
+	 * @param i index of the value
+	 * @return the value
+	 */
 	int select(int i);
 
+	/**
+	 * Rank returns the number of integers that are smaller or equal to x (Rank(infinity) would be
+	 * GetCardinality()).
+	 *
+	 * The value is internally computed as a 64-bit number.
+	 *
+	 * @param x upper limit
+	 *
+	 * @return the rank
+	 */
 	long rank(int x);
 
 	StorageArray iadd(int x);
@@ -61,6 +76,11 @@ public interface StorageArray extends Cloneable, Iterable<Integer>, Externalizab
 	 */
 	StorageArray iadd(long rangeStart, long rangeEnd);
 
+	/**
+	 * Add the value to the container (set the value to "true"), whether it already appears or not.
+	 * @param x integer value
+	 * @return true if the added int wasn't already contained in the bitmap. False otherwise.
+	 */
 	StorageArray icheckedAdd(int x, boolean[] result);
 
 	/**
@@ -169,8 +189,21 @@ public interface StorageArray extends Cloneable, Iterable<Integer>, Externalizab
 
 	StorageArray ixor(StorageArray other);
 
+	/**
+	 * Create a new bitmap of the same class, containing at most maxcardinality integers.
+	 *
+	 * @param maxCardinality maximal cardinality
+	 * @return a new bitmap with cardinality no more than maxcardinality
+	 */
 	StorageArray limit(int maxCardinality);
 
+	/**
+	 * Extracts the values in the specified range, rangeStart (inclusive) and rangeEnd (exclusive)
+	 * while avoiding copies as much as possible.
+	 * @param rangeStart inclusive
+	 * @param rangeEnd exclusive
+	 * @return new storage array
+	 */
 	StorageArray selectRangeWithoutCopy(long rangeStart, long rangeEnd);
 
 	int[] toArray();
